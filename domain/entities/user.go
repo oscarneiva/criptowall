@@ -1,7 +1,7 @@
 package entities
 
 type User struct {
-	ID string
-	Name string
-	Wallets []Wallet
+	ID string `json:"id"`
+	Name string `json:"name"`
+	Wallets []Wallet `json:"wallets"`
 }
