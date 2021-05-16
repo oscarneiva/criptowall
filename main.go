@@ -19,12 +19,19 @@ import (
 func main() {
 	fmt.Println("Running...")
 	repository := apirepositories.NewUserCSVRepository()
+	walletRepository := apirepositories.NewWalletCSVRepository()
 	service := apiservices.NewUserService(repository)
+	walletService := apiservices.NewWalletService(walletRepository)
 
 	router := mux.NewRouter()
 
+	// Create user
 	createEndPoint := httptransport.NewServer(MakeCreateEndpoint(service), DecodeUserFromBody, EncodeResponse)
 	router.Handle("/api/users", createEndPoint).Methods(http.MethodPost)
+
+	// Create wallet
+	createWalletEndPoint := httptransport.NewServer(MakeCreateWalletEndpoint(walletService), DecodeWalletFromBody, EncodeResponse)
+	router.Handle("/api/wallets", createWalletEndPoint).Methods(http.MethodPost)
 
 	searchEndPoint := httptransport.NewServer(MakeSearchEndpoint(service), DecodeNothing, EncodeResponse)
 	router.Handle("/api/users/search", searchEndPoint).Methods(http.MethodGet)
@@ -45,28 +52,19 @@ func main() {
 
 }
 
-// Decode user
-func DecodeUserFromBody(ctx context.Context, r *http.Request) (interface{}, error) {
-	bytes, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	user := &entities.User{}
-
-	err = json.Unmarshal(bytes, user)
-	if err != nil {
-		return nil, err
-	}
-
-	return user, nil
-}
-
 // Create user end point
 func MakeCreateEndpoint(userService services.UserService) func(ctx context.Context, request interface{}) (interface{}, error) {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		user := request.(*entities.User)
 		return userService.Create(ctx, user)
+	}
+}
+
+// Create wallet end point
+func MakeCreateWalletEndpoint(walletService services.WalletService) func(ctx context.Context, request interface{}) (interface{}, error) {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		wallet := request.(*entities.Wallet)
+		return walletService.Create(ctx, wallet)
 	}
 }
 
@@ -85,7 +83,7 @@ func MakeSearchEndpoint(userService services.UserService) func(ctx context.Conte
 	}
 }
 
-// Search update end point
+// Update end point
 func MakeUpdateEndPoint(userService services.UserService) func(ctx context.Context, request interface{}) (interface{}, error){
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		user := request.(*entities.User)
@@ -93,7 +91,7 @@ func MakeUpdateEndPoint(userService services.UserService) func(ctx context.Conte
 	}
 }
 
-// Search delete end point
+// Delete end point
 func MakeDeleteEndPoint(userService services.UserService) func(ctx context.Context, request interface{}) (interface{}, error){
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		id := request.(string)
@@ -106,6 +104,37 @@ func EncodeResponse(ctx context.Context, w http.ResponseWriter, response interfa
 	return json.NewEncoder(w).Encode(response)
 }
 
+func DecodeUserFromBody(ctx context.Context, r *http.Request) (interface{}, error) {
+	bytes, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	user := &entities.User{}
+
+	err = json.Unmarshal(bytes, user)
+	if err != nil {
+		return nil, err
+	}
+
+	return user, nil
+}
+
+func DecodeWalletFromBody(ctx context.Context, r *http.Request) (interface{}, error) {
+	bytes, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	wallet := &entities.Wallet{}
+
+	err = json.Unmarshal(bytes, wallet)
+	if err != nil {
+		return nil, err
+	}
+
+	return wallet, nil
+}
 
 func DecodeNothing(ctx context.Context, r *http.Request) (interface{}, error) {
 	return nil, nil

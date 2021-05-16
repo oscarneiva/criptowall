@@ -1,6 +1,6 @@
 package entities
 
 type Wallet struct {
-	ID string
-	Currencies []Currency
+	ID string `json:"id"`
+	Currencies []Currency `json:"currencies"`
 }
