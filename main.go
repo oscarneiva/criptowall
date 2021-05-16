@@ -26,15 +26,17 @@ func main() {
 	createEndPoint := httptransport.NewServer(MakeCreateEndpoint(service), DecodeUserFromBody, EncodeResponse)
 	router.Handle("/api/users", createEndPoint).Methods(http.MethodPost)
 
-	getByIdEndPoint := httptransport.NewServer(MakeGetByIdEndPoint(service), DecodeIDFromURL, EncodeResponse)
-	router.Handle("/api/users/{id}", getByIdEndPoint).Methods(http.MethodGet)
-
 	searchEndPoint := httptransport.NewServer(MakeSearchEndpoint(service), DecodeNothing, EncodeResponse)
 	router.Handle("/api/users/search", searchEndPoint).Methods(http.MethodGet)
 
+	getByIdEndPoint := httptransport.NewServer(MakeGetByIdEndPoint(service), DecodeIDFromURL, EncodeResponse)
+	router.Handle("/api/users/{id}", getByIdEndPoint).Methods(http.MethodGet)
 
+	updateEndPoint := httptransport.NewServer(MakeUpdateEndPoint(service), DecodeIDFromURLandBody, EncodeResponse)
+	router.Handle("/api/users/{id}", updateEndPoint).Methods(http.MethodPut)
 
-
+	deleteEndPoint := httptransport.NewServer(MakeDeleteEndPoint(service), DecodeIDFromURL, EncodeResponse)
+	router.Handle("/api/users/{id}", deleteEndPoint).Methods(http.MethodDelete)
 
 	err := http.ListenAndServe(":8080", router)
 	if err != nil {
@@ -77,9 +79,25 @@ func MakeGetByIdEndPoint(userService services.UserService) func(ctx context.Cont
 }
 
 // Search user end point
-func MakeSearchEndpoint(userService services.UserService) func(ctx context.Context, request interface{}) (interface{}, error) {
+func MakeSearchEndpoint(userService services.UserService) func(ctx context.Context, request interface{}) (interface{}, error){
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		return userService.Search(ctx)
+	}
+}
+
+// Search update end point
+func MakeUpdateEndPoint(userService services.UserService) func(ctx context.Context, request interface{}) (interface{}, error){
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		user := request.(*entities.User)
+		return userService.Update(ctx, user)
+	}
+}
+
+// Search delete end point
+func MakeDeleteEndPoint(userService services.UserService) func(ctx context.Context, request interface{}) (interface{}, error){
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		id := request.(string)
+		return userService.Delete(ctx, id)
 	}
 }
 
@@ -103,4 +121,27 @@ func DecodeIDFromURL(ctx context.Context, r *http.Request) (interface{}, error){
 	}
 
 	return id, nil
+}
+
+func DecodeIDFromURLandBody(ctx context.Context, r *http.Request) (interface{}, error){
+	uriParams := mux.Vars(r)
+	id := uriParams["id"]
+	if id == "" {
+		err := errors.New("Error: blank id")
+		return nil,err
+	}
+
+	bytes, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	user := &entities.User{}
+
+	err = json.Unmarshal(bytes, user)
+	if err != nil {
+		return nil, err
+	}
+
+	return user, nil
 }
